@@ -1,9 +1,11 @@
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using DbEngine.query;
 
 namespace DbEngine.reader
 {
-    public class CsvQueryProcessor: QueryProcessingEngine
+    public class CsvQueryProcessor : QueryProcessingEngine
     {
         private readonly string _fileName;
         private StreamReader _reader;
@@ -11,6 +13,7 @@ namespace DbEngine.reader
         // Parameterized constructor to initialize filename
         public CsvQueryProcessor(string fileName)
         {
+            this._fileName = fileName;
         }
 
         /*
@@ -22,6 +25,19 @@ namespace DbEngine.reader
         {
             // read the first line
             // populate the header object with the String array containing the header names
+            if (File.Exists(_fileName))
+            {
+                using (_reader = new StreamReader(_fileName))
+                {
+                    string headerRow = _reader.ReadLine();
+                    if (!string.IsNullOrEmpty(headerRow))
+                    {
+                        Header header = new Header();
+                        header.Headers = headerRow.Split(',').Select(x => x.Trim()).ToArray();
+                        return header;
+                    }
+                }
+            }
             return null;
         }
 
@@ -34,12 +50,44 @@ namespace DbEngine.reader
 	    the field is to be treated as String. 
 	     Note: Return Type of the method will be DataTypeDefinitions
 	 */
-        public override DataTypeDefinitions GetColumnType() 
+        public override DataTypeDefinitions GetColumnType()
         {
-           return null;
+            if (File.Exists(_fileName))
+            {
+                using (_reader = new StreamReader(_fileName))
+                {
+                    _reader.ReadLine();
+                    string firstDataRow = _reader.ReadLine();
+                    if (!string.IsNullOrEmpty(firstDataRow))
+                    {
+                        int intValue = 0;
+                        double doubleValue = 0;
+                        List<string> dataTypes = new List<string>();
+                        DataTypeDefinitions dataTypeDefinitions = new DataTypeDefinitions();
+                        foreach(string field in firstDataRow.Split(','))
+                        {
+                            if(int.TryParse(field, out intValue))
+                            {
+                                dataTypes.Add(typeof(System.Int32).ToString());
+                            }
+                            else if(double.TryParse(field, out doubleValue))
+                            {
+                                dataTypes.Add(typeof(System.Double).ToString());
+                            }
+                            else
+                            {
+                                dataTypes.Add(typeof(System.String).ToString());
+                            }
+                        }
+                        dataTypeDefinitions.DataTypes = dataTypes.ToArray();
+                        return dataTypeDefinitions;
+                    }
+                }
+            }
+            return null;
         }
 
-         //getDataRow() method will be used in the upcoming assignments
+        //getDataRow() method will be used in the upcoming assignments
         public override void GetDataRow()
         {
 
